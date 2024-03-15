@@ -18,8 +18,8 @@ Tento repozitár obsahuje projekt vytvorený s cieľom vyvinúť nástroj s graf
 Ďalšie informácie nájdete [tu](https://drive.google.com/drive/u/1/folders/1oOu-LNODl5mhXTUhL00FBES8WgWAhRiR).
 
 ## Riešitelia
-Patrícia Pálková
-Danil Zlobin
-Mátyás Sátor-Érsek
-Tomáš Stupeň
-Damián Bombara
+- Patrícia Pálková
+- Danil Zlobin
+- Mátyás Sátor-Érsek
+- Tomáš Stupeň
+- Damián Bombara
