@@ -1,4 +1,4 @@
-from PyQt5.QtCore import Qt
+from PyQt5.QtCore import Qt, QEvent
 from PyQt5.QtGui import QImage, QPixmap, QPalette, QPainter
 from PyQt5.QtPrintSupport import QPrintDialog, QPrinter
 
@@ -19,15 +19,21 @@ class ImageViewer(QMainWindow):
         self.window_width = 700
         self.window_height = 700
 
-        self.printer = QPrinter()
         self.zoom_factor = 1.0
+        self.image_read = False
 
         self.image_label = QLabel()
         self.image_label.setBackgroundRole(QPalette.Base)
         self.image_label.setSizePolicy(QSizePolicy.Ignored, QSizePolicy.Ignored)
         self.image_label.setScaledContents(True)
 
-        #Temporary buttons
+        self.printer = QPrinter()
+
+        self.scrollArea = QScrollArea()
+        self.scrollArea.setBackgroundRole(QPalette.Dark)
+        self.scrollArea.setWidget(self.image_label)
+
+        # Temporary buttons
         open_button = QPushButton("Open Image")
         open_button.clicked.connect(self.open_image)
         zoom_in_button = QPushButton("Zoom In")
@@ -37,42 +43,65 @@ class ImageViewer(QMainWindow):
         reset_button = QPushButton("Reset Zoom")
         reset_button.clicked.connect(self.reset_zoom)
 
-        layout = QVBoxLayout()
-        layout.addWidget(self.image_label)
         button_layout = QHBoxLayout()
         button_layout.addWidget(open_button)
         button_layout.addWidget(zoom_in_button)
         button_layout.addWidget(zoom_out_button)
         button_layout.addWidget(reset_button)
-        layout.addLayout(button_layout)
+        
+        image_widget = QVBoxLayout()
+        image_widget.addWidget(self.image_label)
+        image_widget.addWidget(self.scrollArea)
+
+        main_layout = QVBoxLayout()
+        main_layout.addWidget(self.scrollArea)
+        main_layout.addLayout(button_layout)
 
         central_widget = QWidget()
-        central_widget.setLayout(layout)
+        central_widget.setLayout(main_layout)
         self.setCentralWidget(central_widget)
+
         self.setFixedSize(self.window_width, self.window_height)
 
 
     def open_image(self):
-        filename, _ = QFileDialog.getOpenFileName(self, "Open Image", "", "Image Files (*.png *.jpg *.jpeg)")
-        #filename = "vbg2.png"
-        img = cv2.imread(filename)
+        options = QFileDialog.Options()
+
+        fileName, _ = QFileDialog.getOpenFileName(self, 'QFileDialog.getOpenFileName()', '',
+                                                  'Images (*.png *.jpeg *.jpg *.bmp *.gif)', options=options)
+
+        if fileName:
+            self.image_read = True                    
+    
+        img = cv2.imread(fileName)
         img = self.convert_cv_qt(img)
         self.image_label.setPixmap(img)
-        # if filename:
-        #     self.pixmap = QPixmap(filename)
-        #     self.display_image()
+        
+        self.scrollArea.setVisible(True)
+        
 
     def zoom_in(self):
-        self.zoom_factor *= 1.25
-        self.display_image()
+        if self.image_read:
+            self.zoom_factor *= 1.25
+            self.display_image()
+            self.adjustScrollBar(self.scrollArea.horizontalScrollBar(), self.zoom_factor)
+            self.adjustScrollBar(self.scrollArea.verticalScrollBar(), self.zoom_factor)
+
 
     def zoom_out(self):
-        self.zoom_factor /= 1.25
-        self.zoom_factor = max(self.zoom_factor, 0.25)  # Minimum zoom level
+        if self.image_read:
+            self.zoom_factor /= 1.25
+            self.zoom_factor = max(self.zoom_factor, 0.25)  # Minimum zoom level
+            self.adjustScrollBar(self.scrollArea.horizontalScrollBar(), self.zoom_factor)
+            self.adjustScrollBar(self.scrollArea.verticalScrollBar(), self.zoom_factor)
+
 
     def reset_zoom(self):
-        self.zoom_factor = 1.0
-        self.display_image()
+        if self.image_read:
+            self.zoom_factor = 1.0
+            self.display_image()
+            self.adjustScrollBar(self.scrollArea.horizontalScrollBar(), self.zoom_factor)
+            self.adjustScrollBar(self.scrollArea.verticalScrollBar(), self.zoom_factor)
 
     def display_image(self):
         self.image_label.resize(self.zoom_factor * self.image_label.pixmap().size())
@@ -85,6 +114,24 @@ class ImageViewer(QMainWindow):
         convert_to_Qt_format = QImage(rgb_image.data, w, h, bytes_per_line, QtGui.QImage.Format_RGB888)
         p = convert_to_Qt_format.scaled(self.window_width, self.window_height, Qt.KeepAspectRatio)
         return QPixmap.fromImage(p)
+
+    def adjustScrollBar(self, scrollBar, factor):
+        scrollBar.setValue(int(factor * scrollBar.value()
+                               + ((factor - 1) * scrollBar.pageStep() / 2)))
+
+    # def wheel_event(self,event):
+    #     if event.type() == QEvent.Wheel:
+    #         if event.angleDelta().y() > 0:
+    #             self.zoom_in()
+    #         else:
+    #             self.zoom_out()
+
+    #         super().wheelEvent(event)
+
+    #     elif event.type() == QEvent.MouseButtonPress and event.button() == Qt.MiddleButton:
+    #         self.reset_zoom()
+    #         super().mousePressEvent(event)
+
 
 
 if __name__ == "__main__":
