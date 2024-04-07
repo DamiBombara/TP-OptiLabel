@@ -5,8 +5,8 @@ import torchvision
 
 import auto_labeling.guided as alg
 
-# preview image height
-psize_h = 1200
+# preview image size
+psize = 1200
 
 # path of exapmle image
 script_folder = os.path.dirname(os.path.realpath(__file__))
@@ -14,7 +14,7 @@ img_path = os.path.join(script_folder, "resources", "example.jpg")
 
 # function to resize image for a preview
 def resize_preview(img):
-    return cv.resize(img, (psize_h, int(psize_h*img.shape[0]/img.shape[1]) ))
+    return cv.resize(img, (psize, int(psize*img.shape[0]/img.shape[1]) ))
 
 # create labeler
 labeler = alg.PSTLabeler()
@@ -33,7 +33,7 @@ labeler.params = {  'phase_strength': 20,
 
 image = cv.imread(str(img_path))
 zero_img = 0*image
-scale = image.shape[1]/psize_h
+scale = image.shape[1]/psize
 # suppress dropdown menu on right click
 cv.namedWindow("preview", flags=cv.WINDOW_AUTOSIZE | cv.WINDOW_KEEPRATIO | cv.WINDOW_GUI_NORMAL)
 cv.imshow("preview", resize_preview(image) )
