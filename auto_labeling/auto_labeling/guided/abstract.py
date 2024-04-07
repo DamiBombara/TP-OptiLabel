@@ -25,7 +25,7 @@ class GResultBase(ABC):
     -------
     @abstractmethod
     def extract_at(x: int, y: int, **kw_args: Any) -> NDArray[Shape["*, *"], Bool]
-        extract feature at point x, y of original image. Returns binary mask.
+        extract feature at point x, y of original image. Returns mask.
     """
     @abstractmethod
     def extract_at(self, x: int, y: int) -> NDArray[Shape["*, *"], Number]: ...

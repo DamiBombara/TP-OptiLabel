@@ -1,7 +1,6 @@
 import cv2 as cv
 import numpy as np
 import os
-import torchvision
 
 import auto_labeling.guided as alg
 
@@ -31,8 +30,7 @@ labeler.params = {  'phase_strength': 20,
                     'thresh_min'    : 0.05,
                     'thresh_max'    : 0.75  }
 
-image = cv.imread(str(img_path))
-zero_img = 0*image
+image = cv.imread(img_path)
 scale = image.shape[1]/psize
 # suppress dropdown menu on right click
 cv.namedWindow("preview", flags=cv.WINDOW_AUTOSIZE | cv.WINDOW_KEEPRATIO | cv.WINDOW_GUI_NORMAL)
@@ -49,16 +47,16 @@ def event_handler(event, x, y, flags, params):
     if event:
         print(f"{event=} {x=} {y=}")
 
-    x = int(scale*x)
-    y = int(scale*y)
+    x = int(scale*x) % feature.shape[1]
+    y = int(scale*y) 
 
     if event == cv.EVENT_LBUTTONDOWN:
         feature = np.logical_or( feature, pst_res.extract_at(x, y) )
     elif event == cv.EVENT_RBUTTONDOWN:
         feature = np.logical_xor( feature, pst_res.extract_at(x, y) )
 
-    disp = cv.bitwise_and(image, zero_img, mask=(~feature).astype(np.uint8) )
-    cv.imshow('preview', np.hstack([resize_preview(pst_res.edges), resize_preview(255*feature.astype(np.uint8)) ]))
+    cv.imshow('preview', np.hstack([resize_preview(pst_res.edges), 
+                                    resize_preview(255*feature.astype(np.uint8)) ]) )
 
 cv.setMouseCallback("preview", event_handler)
 cv.waitKey()

@@ -52,6 +52,10 @@ class PSTParameters(GParametersBase):
         
 
 class PSTResult(GResultBase):
+    """Result of PSTLabeler image preprocess. 
+    User can extract a feature using .extract_at(x,y) providing point
+    in connected region of interest. 
+    """
     _mask: NDArray[Shape["*, *"], UInt8]
     _connectivity: int = 4
 
@@ -60,9 +64,13 @@ class PSTResult(GResultBase):
 
     @property
     def edges(self) -> NDArray[Shape["*, *"], UInt8]:
+        """returns preprocessed by PSTLabeler image
+        """
         return self._mask.copy()
 
     def extract_at(self, x: int, y: int) -> NDArray[Shape["*, *"], UInt8]:
+        """extracts a feature in connected region containing point x, y
+        """
         s = self._mask.shape
         feature = np.zeros( (s[0]+2, s[1]+2) , dtype=np.uint8)
         flags   = self._connectivity | ( 1 << 8 ) | FLOODFILL_MASK_ONLY
@@ -70,6 +78,10 @@ class PSTResult(GResultBase):
         return feature[1:-1, 1:-1]
 
 class PSTLabeler(GLabelerBase):
+    """PSTLabeler class for guided labeling. 
+    Requires to set parameters before using method .apply(image).
+    Check PSTParameters for further information.
+    """
     _params: Optional[PSTParameters] = None
     _PST:    PST_GPU
 
@@ -79,6 +91,9 @@ class PSTLabeler(GLabelerBase):
         self._PST = PST_GPU(device=torch_device)
 
     def set_params(self, parameters: PSTParameters | Mapping) -> None:
+        """Sets parameters for PSTLabeler. Parameters should be an PSTParameters instance or
+        mapping (dict like). 
+        """
         self._params = PSTParameters(**parameters)
 
         if self._PST.h and self._PST.w:
@@ -86,6 +101,8 @@ class PSTLabeler(GLabelerBase):
                                    W = self._params.warp_strength  )
 
     def apply(self, image: MatLike) -> PSTResult:
+        """Preprocesses image and returns PSTResult to provide feature extraction by user later on.
+        """
         assert self._params is not None, "use .set_params before applying labeler"
 
         if image.shape[0] != self._PST.h or image.shape[1] != self._PST.w:
