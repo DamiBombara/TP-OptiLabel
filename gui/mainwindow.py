@@ -11,8 +11,6 @@ from PySide6.QtGui import QPixmap, QIcon
 #     pyside2-uic form.ui -o ui_form.py
 from ui_form import Ui_MainWindow
 
-
-
 class MainWindow(QMainWindow):
     def __init__(self, parent=None):
         super().__init__(parent)
@@ -25,7 +23,7 @@ class MainWindow(QMainWindow):
     def load_images(self):
         file_dialog = QFileDialog(self)
         file_dialog.setFileMode(QFileDialog.ExistingFiles)
-        file_dialog.setNameFilter("Obrázky (*.png *.jpg *.jpeg *.bmp *.gif)")
+        file_dialog.setNameFilter("Obrázky (*.png *.jpg *.jpeg *.bmp *.gif *.tif)")
 
         if file_dialog.exec():
             selected_files = file_dialog.selectedFiles()
