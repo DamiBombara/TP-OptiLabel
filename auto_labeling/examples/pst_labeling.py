@@ -9,7 +9,7 @@ psize = 1200
 
 # path of exapmle image
 script_folder = os.path.dirname(os.path.realpath(__file__))
-img_path = os.path.join(script_folder, "resources", "example.jpg")
+img_path = os.path.join(script_folder, "resources", "example_2.jpg")
 
 # function to resize image for a preview
 def resize_preview(img):
@@ -26,7 +26,7 @@ labeler.set_params(p)
 # or, one could use @property params
 labeler.params = {  'phase_strength': 20, 
                     'warp_strength' : 400,
-                    'sigma_LPF'     : 0.03,
+                    'sigma_LPF'     : 0.3,
                     'thresh_min'    : 0.05,
                     'thresh_max'    : 0.75  }
 
@@ -39,6 +39,9 @@ cv.imshow("preview", resize_preview(image) )
 image_gs = cv.cvtColor(image, cv.COLOR_BGR2GRAY)
 
 pst_res = labeler.apply(image_gs)
+
+pst_res.denoise(thresh_px=300).mask_reconstruction()
+
 feature = np.zeros(image_gs.shape, dtype=np.uint8)
 
 # event handler for user clicks

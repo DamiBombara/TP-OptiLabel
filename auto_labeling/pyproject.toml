@@ -1,5 +1,5 @@
 [tool.poetry]
-name = "auto-labeling"
+name = "auto_labeling"
 version = "0.1.0"
 description = ""
 authors = ["Danil Zlobin <xzlobin@stuba.sk>"]
@@ -22,6 +22,11 @@ typing-extensions = "^4.10.0"
 nptyping = {extras = ["complete"], version = "^2.5.0"}
 opencv-python = "^4.9.0.80"
 torchvision = "^0.17.2"
+imutils = "^0.5.4"
+scikit-learn = "^1.4.2"
+seaborn = "^0.13.2"
+pipe = "^2.2"
+kneed = "^0.8.5"
 
 
 [build-system]

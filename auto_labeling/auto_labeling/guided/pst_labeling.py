@@ -8,13 +8,19 @@ from warnings    import warn
 from typing      import Optional, Mapping, Tuple
 from phycv       import PST_GPU # type: ignore
 from nptyping    import NDArray, Shape, Number, UInt8
-from cv2         import floodFill, FLOODFILL_MASK_ONLY
+from cv2         import floodFill, FLOODFILL_MASK_ONLY, dilate, morphologyEx, \
+                        getStructuringElement, MORPH_ELLIPSE, MORPH_CLOSE, \
+                        medianBlur
 from cv2.typing  import MatLike
 
 from torch._prims_common import DeviceLikeType
 
 import torch
 import numpy as np
+import pipe  as pp # type: ignore
+
+from sklearn.cluster  import DBSCAN     # type: ignore
+from collections      import Counter
 
 @dataclass
 class PSTParameters(GParametersBase):
@@ -76,6 +82,33 @@ class PSTResult(GResultBase):
         flags   = self._connectivity | ( 1 << 8 ) | FLOODFILL_MASK_ONLY
         floodFill(self._mask, feature, seedPoint=(x,y), newVal=0, flags=flags) # type: ignore
         return feature[1:-1, 1:-1]
+    
+    def denoise(self, thresh_px: int, eps_px: int=2, __MinPts: int=4):
+        _X = np.vstack(np.where(self._mask > 0)).T
+        clustered = DBSCAN(eps=eps_px, min_samples=__MinPts).fit(_X)
+        labels = set(clustered.labels_)
+        labels.remove(-1)
+        rlabels = list(Counter(clustered.labels_).items()) | pp.filter(lambda p: p[1]>=thresh_px)
+        _buf = self._mask
+        self._mask = np.zeros(self._mask.shape, dtype=np.uint8)
+        for ll, _ in rlabels:
+            if ll == -1:
+                continue
+            idx = _X[clustered.labels_ == ll]
+            self._mask[idx[:,0],idx[:,1]] = _buf[idx[:,0],idx[:,1]]
+        return self
+    
+    def mask_reconstruction(self, kzise_closing=15, ksize_median=7):
+        kernel     = getStructuringElement(MORPH_ELLIPSE,(kzise_closing,kzise_closing))
+        kernel_sm  = getStructuringElement(MORPH_ELLIPSE,(3,3))
+        self._mask = morphologyEx(self._mask, MORPH_CLOSE, kernel)
+        self._mask = dilate(self._mask, kernel_sm, iterations = 1)
+        self._mask = medianBlur(self._mask, ksize_median)
+        return self
+
+    def copy(self):
+        return PSTResult(self._mask.copy())
+
 
 class PSTLabeler(GLabelerBase):
     """PSTLabeler class for guided labeling. 
