@@ -119,18 +119,11 @@ class ImageViewer(QMainWindow):
         scrollBar.setValue(int(factor * scrollBar.value()
                                + ((factor - 1) * scrollBar.pageStep() / 2)))
 
-    # def wheel_event(self,event):
-    #     if event.type() == QEvent.Wheel:
-    #         if event.angleDelta().y() > 0:
-    #             self.zoom_in()
-    #         else:
-    #             self.zoom_out()
-
-    #         super().wheelEvent(event)
-
-    #     elif event.type() == QEvent.MouseButtonPress and event.button() == Qt.MiddleButton:
-    #         self.reset_zoom()
-    #         super().mousePressEvent(event)
+    def mousePressEvent(self, event):
+        if self.image_label.pixmap() and event.button() == Qt.LeftButton:
+            print("Image Clicked at:", event.pos())
+            # Emit a signal or perform any action you want when the image is clicked
+            # Example: self.imageClicked.emit(event.pos())
 
 
 
