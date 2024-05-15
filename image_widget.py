@@ -31,6 +31,8 @@ class PaintableLabel(QLabel):
     finishedDrawingCirc = pyqtSignal(QPoint,int)
     finishedRubb = pyqtSignal(QPoint,int)
 
+    updateScreen = pyqtSignal()
+
     
     
     def __init__(self, parent=None):
@@ -52,7 +54,18 @@ class PaintableLabel(QLabel):
         values = [1, 3, 5, 7, 10, 15]
         self.dropdown.addItems([str(value) for value in values])
         self.dropdown.currentIndexChanged.connect(self.onIndexChanged)
+
+        self.masks = QComboBox()
+        values = ["Vessel network","Macula", "Optical disk"]
+        self.masks.addItems([str(value) for value in values])
+        self.masks.currentIndexChanged.connect(self.onIndexChangedMask)
+
+        self.currentMask = "Vessel network"
         
+    def onIndexChangedMask(self):
+        self.currentMask = self.masks.currentText()
+        self.updateScreen.emit()
+
 
     def paintEvent(self, event):
         super().paintEvent(event)
@@ -127,6 +140,7 @@ class ImageWidget(QWidget):
         self.imageLabel.finishedDrawingCirc.connect(self.drawMaskCirc)
         self.imageLabel.finishedRubb.connect(self.removeMaskRubb)
 
+        self.imageLabel.updateScreen.connect(self.updateDisplay)
         self.label_height = None
         self.label_width = None
         self.originalImage = None
@@ -140,6 +154,10 @@ class ImageWidget(QWidget):
         self.bottom_edge = 0
         self.shift = 10
 
+        self.vsselMask = None
+        self.diskMask = None
+        self.maculaMask = None
+
 
         layout = QVBoxLayout()
         layout.addWidget(self.imageLabel)
@@ -152,6 +170,9 @@ class ImageWidget(QWidget):
             self.originalImage = cv2.imread(filename)
             self.maskImage = np.zeros(self.originalImage.shape[:2], dtype=np.uint8)
             self.image_to_show = self.originalImage[:self.label_width,:self.label_height,:]
+            self.vsselMask = np.zeros(self.originalImage.shape[:2], dtype=np.uint8)
+            self.diskMask = np.zeros(self.originalImage.shape[:2], dtype=np.uint8)
+            self.maculaMask = np.zeros(self.originalImage.shape[:2], dtype=np.uint8)
             #self.image_to_show_mask = self.maskImage[:self.label_width,:self.label_height]
             h, w, ch = self.originalImage.shape
             self.label_height = h
@@ -170,8 +191,13 @@ class ImageWidget(QWidget):
             for y in range(int(y_center - radius), int(y_center + radius) + 1):
                 for x in range(int(x_center - radius), int(x_center + radius) + 1):
                     if (x - x_center) ** 2 + (y - y_center) ** 2 <= radius ** 2:
-                        self.maskImage[y, x] = 255
-
+                        
+                        if self.imageLabel.currentMask == "Vessel network":
+                            self.vsselMask[y, x] = 255
+                        elif self.imageLabel.currentMask == "Macula":
+                            self.maculaMask[y, x] = 255
+                        elif self.imageLabel.currentMask == "Optical disk":
+                            self.diskMask[y, x] = 255
         
             self.updateDisplay()
     
@@ -183,7 +209,12 @@ class ImageWidget(QWidget):
             for y in range(int(y_center - radius), int(y_center + radius) + 1):
                 for x in range(int(x_center - radius), int(x_center + radius) + 1):
                     if (x - x_center) ** 2 + (y - y_center) ** 2 <= radius ** 2:
-                        self.maskImage[y, x] = 0
+                        if self.imageLabel.currentMask == "Vessel network":
+                            self.vsselMask[y, x] = 0
+                        elif self.imageLabel.currentMask == "Macula":
+                            self.maculaMask[y, x] = 0
+                        elif self.imageLabel.currentMask == "Optical disk":
+                            self.diskMask[y, x] = 0
 
         
             self.updateDisplay()
@@ -201,7 +232,13 @@ class ImageWidget(QWidget):
             x1 += self.left_edge
             x2 += self.left_edge
             #self.maskImage[y1+self.top_edge:y2+self.top_edge, x1+self.left_edge:x2+self.top_edge] = 255
-            self.maskImage[y1:y2,x1:x2] =255
+            self.maskImage[y1:y2,x1:x2] = 255
+            if self.imageLabel.currentMask == "Vessel network":
+                self.vsselMask[y1:y2,x1:x2] = 255
+            elif self.imageLabel.currentMask == "Macula":
+                self.maculaMask[y1:y2,x1:x2] = 255
+            elif self.imageLabel.currentMask == "Optical disk":
+                self.diskMask[y1:y2,x1:x2] = 255
             # self.originalImage[self.bottom_edge:self.top_edge,self.left_edge:self.right_edge,:] = self.image_to_show
             # self.maskImage[self.bottom_edge:self.top_edge,self.left_edge:self.right_edge] = self.image_to_show_mask#[self.top_edge:self.bottom_edge,self.left_edge:self.right_edge]
 
@@ -212,10 +249,16 @@ class ImageWidget(QWidget):
 
             if self.maskImage is not None:
                 coloredMask = np.zeros_like(self.originalImage, dtype=np.uint8)
-                coloredMask[self.maskImage > 0] = [0, 0, 255]  
-                self.image_to_show = cv2.addWeighted(self.originalImage, 1, coloredMask, 0.4, 0)
+                if self.imageLabel.currentMask == "Vessel network":
+                    coloredMask[self.vsselMask > 0] = [0, 0, 255] 
+                elif self.imageLabel.currentMask == "Macula":
+                    coloredMask[self.maculaMask > 0] = [0, 255, 0] 
+                elif self.imageLabel.currentMask == "Optical disk":
+                    coloredMask[self.diskMask > 0] = [255, 0, 0]
+                 
+                self.image_to_show = cv2.addWeighted(self.originalImage, 1, coloredMask, 0.7, 0)
 
-            self.show_image(self.image_to_show)#[self.left_edge:self.right_edge,self.bottom_edge:self.top_edge,:])
+            self.show_image(self.image_to_show[self.left_edge:self.right_edge,self.bottom_edge:self.top_edge,:])
 
     def show_image(self, image_slice):
         piximage = self.convert_cv_qt(image_slice)
@@ -335,16 +378,8 @@ class ImageViewer(QMainWindow):
         mode_layout.addWidget(circButton)
         mode_layout.addWidget(rubberButton)
 
-
-        
-
         mode_layout.addWidget(self.imageWidget.imageLabel.dropdown)
-
-
-        
-
-
-
+        mode_layout.addWidget(self.imageWidget.imageLabel.masks)
 
         main_layout = QHBoxLayout()
         main_layout.addLayout(layout)
