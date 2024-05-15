@@ -1,7 +1,7 @@
 from PyQt5.QtCore import Qt, QRect, QPoint
 from PyQt5.QtGui import QImage, QPixmap, QPainter, QColor
 from PyQt5.QtWidgets import (QApplication, QMainWindow, QWidget, QVBoxLayout,
-                             QHBoxLayout, QPushButton, QFileDialog, QLabel,QGridLayout)
+                             QHBoxLayout, QPushButton, QFileDialog, QLabel,QGridLayout,QComboBox)
 import cv2
 import numpy as np
 from PIL import Image
@@ -27,21 +27,47 @@ class ArrowButtonLayout(QVBoxLayout):
         self.addWidget(self.down_button)
 
 class PaintableLabel(QLabel):
-    finishedDrawing = pyqtSignal(QPoint, QPoint)
+    finishedDrawingRect = pyqtSignal(QPoint, QPoint)
+    finishedDrawingCirc = pyqtSignal(QPoint,int)
+    finishedRubb = pyqtSignal(QPoint,int)
+
+    
+    
     def __init__(self, parent=None):
         super(PaintableLabel, self).__init__(parent)
         self.begin = QPoint()
         self.end = QPoint()
         self.drawing = False
         self.setMouseTracking(True)
+
+        self.pos = None
+
+        self.rectangle = True
+        self.rubber = False
+        self.circle = False
+
+        self.radius = 1
+
+        self.dropdown = QComboBox()
+        values = [1, 3, 5, 7, 10, 15]
+        self.dropdown.addItems([str(value) for value in values])
+        self.dropdown.currentIndexChanged.connect(self.onIndexChanged)
         
 
     def paintEvent(self, event):
         super().paintEvent(event)
-        if self.drawing:
-            painter = QPainter(self)
-            painter.setPen(QColor(255, 0, 0, 128))  # Semi-transparent red pen
+        painter = QPainter(self)
+        if self.drawing and self.rectangle:
+            painter.setPen(QColor(255, 0, 0, 128))  
             painter.drawRect(QRect(self.begin, self.end))
+        
+    
+        if self.pos is not None and self.rubber or self.circle:
+            painter.setPen(Qt.NoPen)
+            painter.setBrush(QColor("red"))
+            painter.drawEllipse(self.pos.x() - (self.radius), self.pos.y() - (self.radius), self.radius*2,self.radius*2)
+        
+
 
     def mousePressEvent(self, event):
         if event.button() == Qt.LeftButton:
@@ -53,29 +79,59 @@ class PaintableLabel(QLabel):
     def mouseMoveEvent(self, event):
         if event.buttons() & Qt.LeftButton:
             self.end = event.pos()
-            self.update()
+
+        if self.circle and self.drawing:
+                self.finishedDrawingCirc.emit(self.end,self.radius)
+
+        if self.rubber and self.drawing:
+                self.finishedRubb.emit(self.end,self.radius)
+
+        self.pos = event.pos()
+        self.update()
 
     def mouseReleaseEvent(self, event):
         if event.button() == Qt.LeftButton and self.drawing:
             self.drawing = False
             self.update()
-            self.finishedDrawing.emit(self.begin, self.end)
-            # print(self.begin)
-            # print(self.end)
+            if self.rectangle:
+                self.finishedDrawingRect.emit(self.begin, self.end)
+            
+    def onIndexChanged(self):
+        self.radius = int(self.dropdown.currentText())
+    
+    
 
 
+    def setRubber(self):
+        self.rubber = True
+        self.rectangle = False
+        self.circle = False
+
+    def setCircle(self):
+        self.rubber = False
+        self.rectangle = False
+        self.circle = True
+
+    def setRectangle(self):
+        self.rubber = False
+        self.rectangle = True
+        self.circle = False
+
+        
 class ImageWidget(QWidget):
 
     def __init__(self):
         super().__init__()
         self.imageLabel = PaintableLabel(self)
-        self.imageLabel.finishedDrawing.connect(self.drawMask)
+        self.imageLabel.finishedDrawingRect.connect(self.drawMaskRect)
+        self.imageLabel.finishedDrawingCirc.connect(self.drawMaskCirc)
+        self.imageLabel.finishedRubb.connect(self.removeMaskRubb)
 
-        self.label_height = 500
-        self.label_width = 500
+        self.label_height = None
+        self.label_width = None
         self.originalImage = None
         self.image_to_show = None
-        self.imageLabel.setFixedSize(self.label_width+5,self.label_height+5)
+        
         self.maskImage = None
 
         self.left_edge = 0
@@ -84,9 +140,11 @@ class ImageWidget(QWidget):
         self.bottom_edge = 0
         self.shift = 10
 
+
         layout = QVBoxLayout()
         layout.addWidget(self.imageLabel)
         self.setLayout(layout)
+
 
     def openImage(self):
         filename, _ = QFileDialog.getOpenFileName(self, "Open Image", "", "Image Files (*.png *.jpg *.jpeg)")
@@ -94,10 +152,43 @@ class ImageWidget(QWidget):
             self.originalImage = cv2.imread(filename)
             self.maskImage = np.zeros(self.originalImage.shape[:2], dtype=np.uint8)
             self.image_to_show = self.originalImage[:self.label_width,:self.label_height,:]
-            self.image_to_show_mask = self.maskImage[:self.label_width,:self.label_height]
+            #self.image_to_show_mask = self.maskImage[:self.label_width,:self.label_height]
+            h, w, ch = self.originalImage.shape
+            self.label_height = h
+            self.label_width = w
+            self.imageLabel.setFixedSize(w,h)
             self.show_image(self.originalImage[self.left_edge:self.right_edge,self.bottom_edge:self.top_edge,:])
         
-    def drawMask(self, begin, end):
+     
+
+
+    def drawMaskCirc(self, center,radius):
+        if self.originalImage is not None:
+            x_center, y_center = center.x(), center.y()
+           
+
+            for y in range(int(y_center - radius), int(y_center + radius) + 1):
+                for x in range(int(x_center - radius), int(x_center + radius) + 1):
+                    if (x - x_center) ** 2 + (y - y_center) ** 2 <= radius ** 2:
+                        self.maskImage[y, x] = 255
+
+        
+            self.updateDisplay()
+    
+    def removeMaskRubb(self, center,radius):
+        if self.originalImage is not None:
+            x_center, y_center = center.x(), center.y()
+           
+
+            for y in range(int(y_center - radius), int(y_center + radius) + 1):
+                for x in range(int(x_center - radius), int(x_center + radius) + 1):
+                    if (x - x_center) ** 2 + (y - y_center) ** 2 <= radius ** 2:
+                        self.maskImage[y, x] = 0
+
+        
+            self.updateDisplay()
+    
+    def drawMaskRect(self, begin, end):
         if self.originalImage is not None:
             x_start, y_start = begin.x(), begin.y()
             x_end, y_end = end.x(), end.y()
@@ -110,7 +201,7 @@ class ImageWidget(QWidget):
             x1 += self.left_edge
             x2 += self.left_edge
             #self.maskImage[y1+self.top_edge:y2+self.top_edge, x1+self.left_edge:x2+self.top_edge] = 255
-            self.image_to_show_mask[y1:y2,x1:x2] =255
+            self.maskImage[y1:y2,x1:x2] =255
             # self.originalImage[self.bottom_edge:self.top_edge,self.left_edge:self.right_edge,:] = self.image_to_show
             # self.maskImage[self.bottom_edge:self.top_edge,self.left_edge:self.right_edge] = self.image_to_show_mask#[self.top_edge:self.bottom_edge,self.left_edge:self.right_edge]
 
@@ -118,22 +209,13 @@ class ImageWidget(QWidget):
 
     def updateDisplay(self):
         if self.originalImage is not None:
-            #imageToShow = cv2.cvtColor(self.originalImage, cv2.COLOR_BGR2RGB)
-            height, width, _ = self.image_to_show.shape
-            bytesPerLine = 3 * width
-            #qImage = QImage(imageToShow.data, width, height, bytesPerLine, QImage.Format_RGB888)
 
             if self.maskImage is not None:
-                mask = cv2.cvtColor(self.maskImage, cv2.COLOR_GRAY2BGR)
-                coloredMask = np.zeros_like(mask, dtype=np.uint8)
+                coloredMask = np.zeros_like(self.originalImage, dtype=np.uint8)
                 coloredMask[self.maskImage > 0] = [0, 0, 255]  
-                self.originalImage = cv2.addWeighted(self.originalImage, 1, coloredMask, 0.4, 0)
-                cv2.imshow("szohi",self.originalImage)
-                cv2.waitKey(0)
-                cv2.destroyAllWindows()
-                #qImage = QImage(imageToShow.data, width, height, bytesPerLine, QImage.Format_RGB888)
+                self.image_to_show = cv2.addWeighted(self.originalImage, 1, coloredMask, 0.4, 0)
 
-            self.show_image(self.originalImage[self.left_edge:self.right_edge,self.bottom_edge:self.top_edge,:])
+            self.show_image(self.image_to_show)#[self.left_edge:self.right_edge,self.bottom_edge:self.top_edge,:])
 
     def show_image(self, image_slice):
         piximage = self.convert_cv_qt(image_slice)
@@ -189,6 +271,17 @@ class ImageWidget(QWidget):
             Image.fromarray(self.maskImage).save("mask.png")
             print("Mask saved as mask.png")
 
+    def loadMask(self):
+        filename, _ = QFileDialog.getOpenFileName(self, "Open Image", "", "Image Files (*.png)")
+        if filename:
+            self.mask_image = cv2.imread(filename, cv2.IMREAD_GRAYSCALE)
+            if self.mask_image is not None:
+                self.maskImage = self.mask_image
+                print("Mask loaded successfully.")
+                self.updateDisplay()
+            else:
+                print("Failed to load mask.")
+
 
 class ImageViewer(QMainWindow):
     def __init__(self):
@@ -215,19 +308,47 @@ class ImageViewer(QMainWindow):
         open_button.clicked.connect(self.imageWidget.openImage)
         saveButton = QPushButton('Save Mask')
         saveButton.clicked.connect(self.imageWidget.saveMaskAsPng)
+        loadButton = QPushButton('Load Mask')
+        loadButton.clicked.connect(self.imageWidget.loadMask)
+ 
 
         layout = QVBoxLayout()
         layout.addWidget(self.imageWidget)
         button_layout = QHBoxLayout()
         button_layout.addWidget(open_button)
         button_layout.addWidget(saveButton)
+        button_layout.addWidget(loadButton)
         #layout.addLayout(button_layout)
         self.button_widget = QWidget()
         self.button_widget.setLayout(button_layout)
+
+
+        mode_layout = QVBoxLayout()
+        rectButton = QPushButton("DrawRectangle")
+        rectButton.clicked.connect(self.imageWidget.imageLabel.setRectangle)
+        circButton = QPushButton('DrawCircle')
+        circButton.clicked.connect(self.imageWidget.imageLabel.setCircle)
+        rubberButton = QPushButton('Rubber')
+        rubberButton.clicked.connect(self.imageWidget.imageLabel.setRubber)
+
+        mode_layout.addWidget(rectButton)
+        mode_layout.addWidget(circButton)
+        mode_layout.addWidget(rubberButton)
+
+
         
+
+        mode_layout.addWidget(self.imageWidget.imageLabel.dropdown)
+
+
+        
+
+
+
 
         main_layout = QHBoxLayout()
         main_layout.addLayout(layout)
+        main_layout.addLayout(mode_layout)
         #main_layout.addWidget(arrow_buttons_widget)
         #arrow_buttons_widget.show()
     
