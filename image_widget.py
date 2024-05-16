@@ -90,14 +90,18 @@ class PaintableLabel(QLabel):
             self.update()
 
     def mouseMoveEvent(self, event):
-        if event.buttons() & Qt.LeftButton:
-            self.end = event.pos()
 
-        if self.circle and self.drawing:
-                self.finishedDrawingCirc.emit(self.end,self.radius)
+        adjusted_rect = self.rect().adjusted(0, 0, -self.radius, -self.radius)
 
-        if self.rubber and self.drawing:
-                self.finishedRubb.emit(self.end,self.radius)
+        if adjusted_rect.contains(event.pos()):
+            if event.buttons() & Qt.LeftButton:
+                self.end = event.pos()
+
+            if self.circle and self.drawing:
+                    self.finishedDrawingCirc.emit(self.end,self.radius)
+
+            if self.rubber and self.drawing:
+                    self.finishedRubb.emit(self.end,self.radius)
 
         self.pos = event.pos()
         self.update()
@@ -111,7 +115,6 @@ class PaintableLabel(QLabel):
             
     def onIndexChanged(self):
         self.radius = int(self.dropdown.currentText())
-    
     
 
 
