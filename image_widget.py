@@ -171,6 +171,10 @@ class ImageWidget(QWidget):
         filename, _ = QFileDialog.getOpenFileName(self, "Open Image", "", "Image Files (*.png *.jpg *.jpeg)")
         if filename:
             self.originalImage = cv2.imread(filename)
+
+            desired_width = 800
+            desired_height = 600
+            self.originalImage = cv2.resize(self.originalImage, (desired_width, desired_height))
             self.maskImage = np.zeros(self.originalImage.shape[:2], dtype=np.uint8)
             self.image_to_show = self.originalImage[:self.label_width,:self.label_height,:]
             self.vsselMask = np.zeros(self.originalImage.shape[:2], dtype=np.uint8)
