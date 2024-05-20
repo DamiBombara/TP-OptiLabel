@@ -15,7 +15,6 @@ av = "<9"
 
 numpy = "^1.26.4"
 phycv = "^1.2.6"
-torch = "^2.2.2"
 pandas = "^2.2.1"
 pygad = "^3.3.1"
 typing-extensions = "^4.10.0"
@@ -27,6 +26,10 @@ scikit-learn = "^1.4.2"
 seaborn = "^0.13.2"
 pipe = "^2.2"
 kneed = "^0.8.5"
+subpixel-edges = "^0.1.1"
+tqdm = "^4.66.4"
+tensorflow = "^2.16.1"
+torchmetrics = "^1.4.0.post0"
 
 
 [build-system]

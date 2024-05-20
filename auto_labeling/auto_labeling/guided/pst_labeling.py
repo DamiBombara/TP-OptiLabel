@@ -87,7 +87,8 @@ class PSTResult(GResultBase):
         _X = np.vstack(np.where(self._mask > 0)).T
         clustered = DBSCAN(eps=eps_px, min_samples=__MinPts).fit(_X)
         labels = set(clustered.labels_)
-        labels.remove(-1)
+        if -1 in labels:
+            labels.remove(-1)
         rlabels = list(Counter(clustered.labels_).items()) | pp.filter(lambda p: p[1]>=thresh_px)
         _buf = self._mask
         self._mask = np.zeros(self._mask.shape, dtype=np.uint8)
@@ -133,7 +134,7 @@ class PSTLabeler(GLabelerBase):
             self._PST.init_kernel( S = self._params.phase_strength,
                                    W = self._params.warp_strength  )
 
-    def apply(self, image: MatLike) -> PSTResult:
+    def apply(self, image: MatLike, flag_raw: bool = False) -> PSTResult:
         """Preprocesses image and returns PSTResult to provide feature extraction by user later on.
         """
         assert self._params is not None, "use .set_params before applying labeler"
@@ -150,6 +151,8 @@ class PSTLabeler(GLabelerBase):
                                 self._params.thresh_min, 
                                 self._params.thresh_max, 
                                 self._params.morph_flag  )
-        
-        mask = (255*self._PST.pst_output.cpu().numpy()).astype("uint8")
+        if not flag_raw:
+            mask = (255*self._PST.pst_output.cpu().numpy()).astype("uint8")
+        else:
+            mask = self._PST.pst_output.cpu().numpy()
         return PSTResult(mask)

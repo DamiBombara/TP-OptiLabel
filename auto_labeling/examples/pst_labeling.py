@@ -9,7 +9,7 @@ psize = 1200
 
 # path of exapmle image
 script_folder = os.path.dirname(os.path.realpath(__file__))
-img_path = os.path.join(script_folder, "resources", "example_2.jpg")
+img_path = os.path.join(script_folder, "resources", "example.jpg")
 
 # function to resize image for a preview
 def resize_preview(img):
