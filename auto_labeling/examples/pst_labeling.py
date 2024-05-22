@@ -57,7 +57,7 @@ image_gs = cv.cvtColor(image, cv.COLOR_BGR2GRAY)
 
 pst_res = labeler.apply(image_gs)
 
-pst_res.denoise(thresh_px=25).mask_reconstruction().denoise(thresh_px=40)
+pst_res.denoise(thresh_px=25).mask_reconstruction().denoise(thresh_px=100)
 
 feature = np.zeros(image_gs.shape, dtype=np.uint8)
 
