@@ -55,6 +55,23 @@ vessel_feature = pst_res.extract_at(x, y)
 
 `vessel_feature` - is the result - mask with a connected component containing point x, y.
 
+## Parameters estimation
+
+To estimate parameters of PST transform you can use pre-trained convolutional network (precision is still bad)
+
+```python
+from auto_labeling.nn import PSTParametersEstimator
+
+p = PSTParametersEstimator().apply(image)
+labeler.set_params(p)
+```
+
+if you have the mask of the actual region of interest you can provide it
+
+```python
+p = PSTParametersEstimator().apply(image, mask=your_eye_mask)
+```
+
 ## Installation
 
 [Poetry](https://python-poetry.org/) is used as a package manager. To install the package in virtual enviroment follow steps below:

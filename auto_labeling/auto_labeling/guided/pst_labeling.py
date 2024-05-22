@@ -85,6 +85,8 @@ class PSTResult(GResultBase):
     
     def denoise(self, thresh_px: int, eps_px: int=2, __MinPts: int=4):
         _X = np.vstack(np.where(self._mask > 0)).T
+        if(_X.size == 0):
+            return self
         clustered = DBSCAN(eps=eps_px, min_samples=__MinPts).fit(_X)
         labels = set(clustered.labels_)
         if -1 in labels:

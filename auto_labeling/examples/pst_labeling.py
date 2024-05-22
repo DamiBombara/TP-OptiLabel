@@ -3,6 +3,16 @@ import numpy as np
 import os
 
 import auto_labeling.guided as alg
+from auto_labeling.nn import PSTParametersEstimator
+
+def waitUserExit(window_name):
+   """Function to wait window with name window_name to be closed. Either with a keyboard or by system UI.
+   The only purpose of this function to exist is that after using cv.waitKey() script stucks forever
+   if user closed the window with X button.
+   """
+   while( cv.getWindowProperty(window_name,cv.WND_PROP_VISIBLE ) ):
+      cv.waitKey(100)
+   cv.destroyAllWindows()
 
 # preview image size
 psize = 1200
@@ -31,6 +41,13 @@ labeler.params = {  'phase_strength': 20,
                     'thresh_max'    : 0.75  }
 
 image = cv.imread(img_path)
+
+# or, we can try to use convolutional network to predict parameters
+# (precision is still bad)
+p = PSTParametersEstimator().apply(image, n_samples=100)
+labeler.set_params(p)
+print(f"Estimated parameters: {p}")
+
 scale = image.shape[1]/psize
 # suppress dropdown menu on right click
 cv.namedWindow("preview", flags=cv.WINDOW_AUTOSIZE | cv.WINDOW_KEEPRATIO | cv.WINDOW_GUI_NORMAL)
@@ -40,7 +57,7 @@ image_gs = cv.cvtColor(image, cv.COLOR_BGR2GRAY)
 
 pst_res = labeler.apply(image_gs)
 
-pst_res.denoise(thresh_px=300).mask_reconstruction()
+pst_res.denoise(thresh_px=25).mask_reconstruction().denoise(thresh_px=40)
 
 feature = np.zeros(image_gs.shape, dtype=np.uint8)
 
@@ -62,4 +79,4 @@ def event_handler(event, x, y, flags, params):
                                     resize_preview(255*feature.astype(np.uint8)) ]) )
 
 cv.setMouseCallback("preview", event_handler)
-cv.waitKey()
+waitUserExit("preview")
