@@ -156,5 +156,5 @@ class PSTLabeler(GLabelerBase):
         if not flag_raw:
             mask = (255*self._PST.pst_output.cpu().numpy()).astype("uint8")
         else:
-            mask = self._PST.pst_output.cpu().numpy()
+            mask = self._PST.pst_output
         return PSTResult(mask)

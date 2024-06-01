@@ -270,6 +270,17 @@ docs = ["ipython", "matplotlib", "numpydoc", "sphinx"]
 tests = ["pytest", "pytest-cov", "pytest-xdist"]
 
 [[package]]
+name = "einops"
+version = "0.8.0"
+description = "A new flavour of deep learning operations"
+optional = false
+python-versions = ">=3.8"
+files = [
+    {file = "einops-0.8.0-py3-none-any.whl", hash = "sha256:9572fb63046264a862693b0a87088af3bdc8c068fde03de63453cbbde245465f"},
+    {file = "einops-0.8.0.tar.gz", hash = "sha256:63486517fed345712a8385c100cb279108d9d47e6ae59099b07657e983deae85"},
+]
+
+[[package]]
 name = "filelock"
 version = "3.13.3"
 description = "A platform independent file lock."
@@ -2480,4 +2491,4 @@ files = [
 [metadata]
 lock-version = "2.0"
 python-versions = ">=3.10,<3.12"
-content-hash = "0f26890fc5e6083e1135b6821d61cc65162f835a3ec2aeae81a5f26cc86db802"
+content-hash = "ccd4a0288e150d2801d79b4e82af4b65d58430b9121f69260ef8db1adb3ceaa0"
