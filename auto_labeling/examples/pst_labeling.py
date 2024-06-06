@@ -41,7 +41,7 @@ labeler.params = {  'phase_strength': 20,
                     'thresh_max'    : 0.75  }
 
 image = cv.imread(img_path)
-
+image = np.pad(image,[(10,10), (10,10), (0,0)])
 # or, we can try to use convolutional network to predict parameters
 # (precision is still bad)
 p = PSTParametersEstimator().apply(image, n_samples=100)
@@ -57,10 +57,13 @@ image_gs = cv.cvtColor(image, cv.COLOR_BGR2GRAY)
 
 pst_res = labeler.apply(image_gs)
 
-pst_res.denoise(thresh_px=25).mask_reconstruction().denoise(thresh_px=100)
+pst_res.denoise(thresh_px=100).mask_reconstruction()
 
 feature = np.zeros(image_gs.shape, dtype=np.uint8)
 
+colored_edges =  np.pad(pst_res.edges[:,:,None], [(0, 0), (0, 0), (0,2)], mode='constant', constant_values=0)
+image_and_mask = cv.addWeighted(resize_preview(image), 0.8,
+                                resize_preview(colored_edges), 0.7, 0.0)
 # event handler for user clicks
 def event_handler(event, x, y, flags, params):
     global feature
@@ -68,15 +71,17 @@ def event_handler(event, x, y, flags, params):
         print(f"{event=} {x=} {y=}")
 
     x = int(scale*x) % feature.shape[1]
-    y = int(scale*y) 
+    y = int(scale*y) % feature.shape[0]
 
     if event == cv.EVENT_LBUTTONDOWN:
         feature = np.logical_or( feature, pst_res.extract_at(x, y) )
     elif event == cv.EVENT_RBUTTONDOWN:
         feature = np.logical_xor( feature, pst_res.extract_at(x, y) )
 
-    cv.imshow('preview', np.hstack([resize_preview(pst_res.edges), 
-                                    resize_preview(255*feature.astype(np.uint8)) ]) )
+    cv.imshow('preview', np.hstack([image_and_mask, 
+                                    np.repeat(resize_preview(255*feature.astype(np.uint8))[:,:,None], 3, axis=2) 
+                                   ]) 
+             )
 
 cv.setMouseCallback("preview", event_handler)
 waitUserExit("preview")
